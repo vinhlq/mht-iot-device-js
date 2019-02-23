@@ -1,0 +1,24 @@
+{
+    "name": "mht-iot-sdk-js",
+    "description": "MHT IoT Node.js SDK",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://gitlab.com/vinhlq/mht-iot-sdk-js.git"
+    },
+    "author": {
+      "name": "vinhlq",
+      "email": "vinhlq@hotmail.com",
+      "url": "http://mht.vn"
+    },
+    "dependencies": {
+        "aws-sdk": "2.406.0",
+        "dotenv": "6.2.0",
+        "crypto": "",
+        "node-forge": "0.8.0"
+    },
+    "devDependencies": {
+        "aws-iot-device-sdk": ""
+    }
+}
