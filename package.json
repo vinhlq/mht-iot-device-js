@@ -1,7 +1,7 @@
 {
-    "name": "mht-iot-sdk-js",
+    "name": "mht-iot-sdk",
     "description": "MHT IoT Node.js SDK",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "main": "./index.js",
     "repository": {
         "type": "git",
@@ -20,5 +20,6 @@
     },
     "devDependencies": {
         "aws-iot-device-sdk": ""
-    }
+    },
+    "license": "Apache-2.0"
 }

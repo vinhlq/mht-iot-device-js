@@ -1,11 +1,12 @@
-util=require('util');
-crypto=require('crypto');
-var forge = require('node-forge');
-require('dotenv').config()
-
+var crypto=require('crypto');
+var ca = require('../lib/ca.js');
+var forge = require('node-forge')
+var pki = forge.pki;
 var AWS = require('aws-sdk');
+var iot = new AWS.Iot();
 // AWS SDK was loaded after bluebird, set promise dependency
 AWS.config.setPromisesDependency(Promise);
+
 
 function topicValidate(args){
     if(args.publishTopic === undefined) args.publishTopic = [];
@@ -71,10 +72,6 @@ function createPolicyDocument (args) {
     return {topic: {allow: args.allow, deny: args.deny}, document: policyDocument};
 }
 
-function genrsa(){
-    var rsa = forge.pki.rsa;
-}
-
 function defaultClientId(){
     return crypto.randomBytes(Math.ceil(12/2)).toString('hex').slice(0,12).toUpperCase();
 }
@@ -83,10 +80,150 @@ function defaultThingName(clientId){
     return "mht-" + clientId;
 }
 
-class Iot{
+class Iot {
     constructor(){
         this.iot = new AWS.Iot()
     }
+    generateCA(args, registrationCode, callback){
+        args = args || {};
+        
+        args.cert = args.cert || {};
+        args.csr = args.csr || {};
+
+        return new Promise((resolve, reject) => {
+            args.cert.attrs = args.cert.attrs || {};
+            var attrs = [{
+                name: 'countryName',
+                value: args.cert.attrs.countryName || 'VN'
+            }, {
+                shortName: 'ST',
+                value: args.cert.attrs.ST || 'Hanoi'
+            }, {
+                name: 'localityName',
+                value: args.cert.attrs.localityName || 'Hanoi'
+            }, {
+                name: 'organizationName',
+                value: args.cert.attrs.organizationName || 'minhhatech'
+            }, {
+                shortName: 'OU',
+                value: args.cert.attrs.OU || 'MHT'
+            }, {
+                name: 'commonName',
+                value: registrationCode
+            }];
+            
+            var params = {
+                attrs: attrs
+            };
+            ca.createCACertificate(params, (err, result) => {
+                if(err){
+                    return callback ? callback(err) : reject(err);
+                }
+                return resolve(result);
+            });
+        })
+        .then(function (result) {
+            return new Promise((resolve, reject) => {
+
+                args.csr.attrs = args.csr.attrs || {};
+                var attrs = [{
+                    name: 'countryName',
+                    value: args.csr.attrs.countryName || 'VN'
+                }, {
+                    shortName: 'ST',
+                    value: args.csr.attrs.ST || 'Hanoi'
+                }, {
+                    name: 'localityName',
+                    value: args.csr.attrs.localityName || 'Hanoi'
+                }, {
+                    name: 'organizationName',
+                    value: args.csr.attrs.organizationName || 'minhhatech'
+                }, {
+                    shortName: 'OU',
+                    value: args.csr.attrs.OU || 'MHT'
+                }, {
+                    name: 'commonName',
+                    value: registrationCode
+                }];
+                
+                var params = {
+                    attrs: attrs
+                };
+                ca.createVerificationCertificateFromCA(params, result.caCert, result.caKey, (err, cert) => {
+
+                    if (err){
+                        return callback ? callback(err) : reject(err);
+                    }
+                    
+                    // var pem = pki.certificateToPem(cert);
+                    // console.log(pem);
+
+                    var data = {    cert: cert,
+                                    caCert: result.caCert,
+                                    caKey: result.caKey
+                            };
+                    return callback ? callback(null, data) : resolve(data);
+                });
+            });
+        })
+    }
+
+    registerCA(cert, caCert, callback){
+        return new Promise((resolve, reject) => {
+            
+            var caCertPem = pki.certificateToPem(caCert);
+            var certPem = pki.certificateToPem(cert);
+
+            var params = {
+                caCertificate: caCertPem, /* required */
+                verificationCertificate: certPem, /* required */
+                allowAutoRegistration: true,
+                setAsActive: true
+            };
+            this.iot.registerCACertificate(params, (err, data) => {
+                if (err){
+                    return callback ? callback(err) : reject(err);
+                }
+                return callback ? callback(null, data) : resolve(data);
+                
+                //console.log(data);           // successful response
+            });
+        });
+    }
+
+    generateAndRegisterCA(args, callback){
+        return new Promise((resolve, reject) => {
+            return new Promise((resolve, reject) => {
+                this.iot.getRegistrationCode({}, function (err, data) {
+                    
+                    if (err){
+                        return callback ? callback(err) : reject(err);
+                    }
+                    
+                    resolve(data.registrationCode);
+                });
+            })
+            .then((registrationCode) => {
+                return this.generateCA(args, registrationCode);
+            })
+            .then((result) => {
+                return this.registerCA(result.cert, result.caCert, (err, data) => {
+                    if (err){
+                        return callback ? callback(err) : reject(err);
+                    }
+                    result.response = data;
+                    return callback ? callback(null, result) : resolve(result);
+                });
+            })
+        });
+    }
+
+
+
+
+
+
+
 
     describeEndpoint(){
         return this.iot.describeEndpoint(arguments).promise();
@@ -191,4 +328,4 @@ class Iot{
     }
 }
 
-module.exports=Iot;
+module.exports = Iot;;

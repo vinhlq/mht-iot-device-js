@@ -1,1 +1,1 @@
-module.exports.Iot = require('./aws/iot.js');
+module.exports.Iot = require('./clients/iot.js');

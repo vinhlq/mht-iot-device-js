@@ -1,5 +1,7 @@
 .*
 *.key
 *.crt
+*.cert
+*.pem
 node_modules
 !/.gitignore
