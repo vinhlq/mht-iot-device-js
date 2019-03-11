@@ -15,7 +15,6 @@
     "dependencies": {
         "aws-sdk": "2.406.0",
         "dotenv": "6.2.0",
-        "crypto": "",
         "node-forge": "0.8.0"
     },
     "devDependencies": {
