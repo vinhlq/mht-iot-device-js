@@ -1,0 +1,14 @@
+.*
+*.key
+*.crt
+*.cert
+*.pem
+credentials.csv
+test
+config
+babel.config.js
+git_submodule_init.sh
+git.sh
+node_modules
+.git
+!/.npmignore

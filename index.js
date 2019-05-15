@@ -1,1 +1,3 @@
-module.exports.Iot = require('./clients/iot.js');
+module.exports = {
+    Iot: require('./src/iot.js')
+}

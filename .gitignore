@@ -3,5 +3,13 @@
 *.crt
 *.cert
 *.pem
-node_modules
+*.old
+mht-zigbee-examples*
+/**/dist
+/**/node_modules
+/**/config/*.json
 !/.gitignore
+!/.npmignore
+.git
+.idea
+

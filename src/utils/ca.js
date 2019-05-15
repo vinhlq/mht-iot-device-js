@@ -241,6 +241,12 @@ function createCertificateSigningRequest(args, callback) {
     });
 }
 
+function createCertificateSigningRequestSync(args, callback) {
+    let keys = forge.pki.rsa.generateKeyPair(2048);
+    let csr = createCertificateSigningRequestFromKeys(args, keys.privateKey, keys.publicKey);
+    return {csr: csr, keys: keys};
+}
+
 function createCertificateSigningRequestFromPem(args, pem) {
     const pki = forge.pki;
 
@@ -257,7 +263,7 @@ function createCertificateSigningRequestFromPemFile(args, pemFile, callback) {
     });
 }
 
-function createVerificationCertificateFromCA(args, caCert, caKey, callback) {
+function createCertificateFromCA(args, caCert, caKey, callback) {
     createCertificateSigningRequest(args, function (err, data) {
         if (err) {
             return callback(err);
@@ -271,14 +277,20 @@ function createVerificationCertificateFromCA(args, caCert, caKey, callback) {
     });
 }
 
-function createVerificationCertificateFromCAPem(args, pemCert, pemKey, callback) {
+function createCertificateFromCASync(args, caCert, caKey) {
+    let result = createCertificateSigningRequestSync(args);
+    let cert = createCertificateFromCertificateSigningRequest(args, result.csr, caCert, caKey);
+    return {cert: cert, keys: result.keys};
+}
+
+function createCertificateFromCAPem(args, pemCert, pemKey, callback) {
     createCertificateSigningRequest(args, function (err, data) {
         if (err) {
             return callback(err);
         }
         const pki = forge.pki;
 
-        const caCert = certificateFromPem(pemCert);
+        const caCert = pki.certificateFromPem(pemCert);
         const caKey = pki.privateKeyFromPem(pemKey)
 
         const cert = createCertificateFromCertificateSigningRequest(args, data.csr, caCert, caKey);
@@ -286,9 +298,27 @@ function createVerificationCertificateFromCAPem(args, pemCert, pemKey, callback)
     });
 }
 
-module.exports.createCertificateSigningRequest = createCertificateSigningRequest;
-module.exports.createCACertificate = createCACertificate;
-module.exports.createCAFromPem = createCAFromPem;
-module.exports.createCAFromPemFile = createCAFromPemFile;
-module.exports.createCertificateFromCertificateSigningRequest = createCertificateFromCertificateSigningRequest;
-module.exports.createVerificationCertificateFromCA = createVerificationCertificateFromCA;
+function createCertificateFromCAPemSync(args, pemCert, pemKey) {
+    let caCert = forge.pki.certificateFromPem(pemCert);
+    let caKey = forge.pki.privateKeyFromPem(pemKey);
+    let result = createCertificateSigningRequestSync(args);
+    let cert = createCertificateFromCertificateSigningRequest(args, result.csr, caCert, caKey);
+    cert = forge.pki.certificateToPem(cert);
+    let keys = {
+        privateKey: forge.pki.privateKeyToPem(result.keys.privateKey),
+        publicKey: forge.pki.publicKeyToPem(result.keys.publicKey)
+    };
+    return {cert: cert, keys: keys}
+}
+
+module.exports = {
+    createCertificateSigningRequest: createCertificateSigningRequest,
+    createCACertificate: createCACertificate,
+    createCAFromPem: createCAFromPem,
+    createCAFromPemFile: createCAFromPemFile,
+    createCertificateFromCertificateSigningRequest: createCertificateFromCertificateSigningRequest,
+    createCertificateFromCA: createCertificateFromCA,
+    createCertificateFromCASync: createCertificateFromCASync,
+    createCertificateFromCAPem: createCertificateFromCAPem,
+    createCertificateFromCAPemSync: createCertificateFromCAPemSync
+}
